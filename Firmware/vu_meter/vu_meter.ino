@@ -2,39 +2,40 @@
 #include <math.h>
 #include <EEPROM.h>
  
-#define N_PIXELS  29  // Number of pixels in strand
-#define N_STEPS   14
-#define LEFT_IN   A0  //Left audio channel
-#define RIGHT_IN   A1  //Right audio channel
+#define N_PIXELS  13   // Number of pixels in strand
+#define N_STEPS   13   // Used Pixels
+#define LEFT_IN   A5   //Left audio channel
+#define RIGHT_IN   A6  //Right audio channel
 #define LEFT_LED_PIN    6  // NeoPixel LED strand is connected to this pin
 #define RIGHT_LED_PIN    5  // NeoPixel LED strand is connected to this pin
 #define SAMPLE_WINDOW   30  // Sample window for average level
-#define INPUT_FLOOR 60 //Lower range of analogRead input
-#define INPUT_CEILING 480 //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
+#define INPUT_FLOOR 12 //Lower range of analogRead input
+#define INPUT_CEILING 96 //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
-#define CHANGE_MODE_PIN 2
-#define POT_ENABLE_PIN 3
-#define POT_PIN A5
+#define CHANGE_MODE_PIN 3 // Have to Use Pin 3(Interrupt)
+#define POT_ENABLE_PIN 2 // Have to Use Pin 2 (Interrupt)
+#define POT_PIN A0
 
 #define EEPROM_MODE_ADDR 0
 #define EEPROM_BRIGHTNESS_ADDR 1
 #define EEPROM_COLOR_ADDR 2
 #define EEPROM_CYCLE_SPEED_ADDR 5
 
-unsigned int sampleLeft, sampleRight;
+uint16_t sampleLeft, sampleRight;
  
 Adafruit_NeoPixel leftStrip = Adafruit_NeoPixel(N_PIXELS, LEFT_LED_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel rightStrip = Adafruit_NeoPixel(N_PIXELS, RIGHT_LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
 bool volatile changeParams = false;
+bool volatile changeParamsMode = false;
 //Parameters:
 uint8_t brightness, newBrightness;
 uint16_t color, newColor;
 uint8_t cycleSpeed, newCycleSpeed;
 
 
-enum mode{
+enum mode {
  classic = 0,
  rainbow = 1,
  presetColor = 2,
@@ -86,17 +87,17 @@ void setup()
   rightStrip.show(); // Initialize all pixels to 'off'
 
 
-  pinMode(CHANGE_MODE_PIN, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(CHANGE_MODE_PIN), changeMode, RISING);
+  pinMode(CHANGE_MODE_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(CHANGE_MODE_PIN), changeMode , RISING);
 
-  pinMode(POT_ENABLE_PIN, OUTPUT);
+  pinMode(POT_ENABLE_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(POT_ENABLE_PIN), toggleChangeParams, RISING);
 }
  
 void loop() 
 {
   if(changeParams){
-    changeParameters();    
+    changeParameters(); 
   }
   else{
     showVU();
@@ -135,14 +136,14 @@ void changeParameters(){
     else if(currentMode == changeColor){
       newCycleSpeed = map(adcVal, 0, 1023, 0, 11);
       
-      uint8_t ledsPerStep = N_PIXELS % 11 > 0 ? (N_PIXELS / 11) + 1 : N_PIXELS / 11;
+      uint16_t ledsPerStep = N_PIXELS % 11 > 0 ? (N_PIXELS / 11) + 1 : N_PIXELS / 11;
 
-      for(uint8_t i = 0; i<=N_PIXELS; i++){
+      for(uint16_t i = 0; i<=N_PIXELS; i++){
         leftStrip.setPixelColor(i, 0, 0, 0);
         rightStrip.setPixelColor(i, 0, 0, 0);
       }
       
-      for(uint8_t i = 0; i<=newCycleSpeed*ledsPerStep; i++){
+      for(uint16_t i = 0; i<=newCycleSpeed*ledsPerStep; i++){
         leftStrip.setPixelColor(i, 255, 255, 255);
         rightStrip.setPixelColor(i, 255, 255, 255);
       }
@@ -241,14 +242,14 @@ void showVU(){
   if (cLeft <= N_STEPS) { // Fill partial column with off pixels
     for(int i=N_STEPS-cLeft; i<=N_STEPS; i++){   
       leftStrip.setPixelColor(i, 0, 0, 0);
-      leftStrip.setPixelColor(N_PIXELS-1-i, 0, 0, 0);
+      //leftStrip.setPixelColor(N_PIXELS-1-i, 0, 0, 0);
     }
   }
 
   if (cRight <= N_STEPS) { // Fill partial column with off pixels
     for(int i=N_STEPS-cRight; i<=N_STEPS; i++){   
       rightStrip.setPixelColor(i, 0, 0, 0);
-      rightStrip.setPixelColor(N_PIXELS-1-i, 0, 0, 0);
+      //rightStrip.setPixelColor(N_PIXELS-1-i, 0, 0, 0);
     }
   }
   
@@ -261,21 +262,21 @@ void drawClassic(){
     for (int i=0;i<=N_STEPS;i++){
       if(i<N_STEPS*0.5){
          leftStrip.setPixelColor(i, 0, 255, 0);
-         leftStrip.setPixelColor(N_PIXELS-i, 0, 255, 0);
+         //leftStrip.setPixelColor(N_PIXELS-i, 0, 255, 0);
          rightStrip.setPixelColor(i, 0, 255, 0);
-         rightStrip.setPixelColor(N_PIXELS-i, 0, 255, 0);
+         //rightStrip.setPixelColor(N_PIXELS-i, 0, 255, 0);
       }
       else if(i>=N_STEPS*0.5 && i<N_STEPS*0.7){
          leftStrip.setPixelColor(i, 255, 255, 0);
-         leftStrip.setPixelColor(N_PIXELS-i, 255, 255, 0);
+         //leftStrip.setPixelColor(N_PIXELS-i, 255, 255, 0);
          rightStrip.setPixelColor(i, 255, 255, 0);
-         rightStrip.setPixelColor(N_PIXELS-i, 255, 255, 0);
+         //rightStrip.setPixelColor(N_PIXELS-i, 255, 255, 0);
       }
       else{
          leftStrip.setPixelColor(i, 255, 0, 0);
-         leftStrip.setPixelColor(N_PIXELS-i, 255, 0, 0);
+         //leftStrip.setPixelColor(N_PIXELS-i, 255, 0, 0);
          rightStrip.setPixelColor(i, 255, 0, 0);
-         rightStrip.setPixelColor(N_PIXELS-i, 255, 0, 0);
+         //rightStrip.setPixelColor(N_PIXELS-i, 255, 0, 0);
       }
   }
 }
@@ -283,9 +284,9 @@ void drawClassic(){
 void drawRainbow(){
   for (int i=0;i<=N_STEPS;i++){
     leftStrip.setPixelColor(i,WheelLeft(map(i, 0, N_STEPS, 30, 150)));
-    leftStrip.setPixelColor(N_PIXELS-i,WheelLeft(map(i, 0, N_STEPS, 30, 150)));
+    //leftStrip.setPixelColor(N_PIXELS-i,WheelLeft(map(i, 0, N_STEPS, 30, 150)));
     rightStrip.setPixelColor(i,WheelRight(map(i, 0, N_STEPS, 30, 150)));
-    rightStrip.setPixelColor(N_PIXELS-i,WheelRight(map(i, 0, N_STEPS, 30, 150)));
+    //rightStrip.setPixelColor(N_PIXELS-i,WheelRight(map(i, 0, N_STEPS, 30, 150)));
   }
 }
 
@@ -296,9 +297,9 @@ void drawPresetColor(uint16_t _color){
   
   for (int i=0;i<=N_STEPS;i++){
     leftStrip.setPixelColor(i, redVal, grnVal, bluVal);
-    leftStrip.setPixelColor(N_PIXELS-i, redVal, grnVal, bluVal);
+    //leftStrip.setPixelColor(N_PIXELS-i, redVal, grnVal, bluVal);
     rightStrip.setPixelColor(i, redVal, grnVal, bluVal);
-    rightStrip.setPixelColor(N_PIXELS-i, redVal, grnVal, bluVal);
+    //rightStrip.setPixelColor(N_PIXELS-i, redVal, grnVal, bluVal);
   }
 }
 
@@ -307,13 +308,14 @@ void drawCycleColor(uint8_t _speed){
     uint32_t colorValLeft = WheelLeft((millis() >> _speed) & 255);
     uint32_t colorValRight = WheelLeft((millis() >> _speed) & 255);
     leftStrip.setPixelColor(i, colorValLeft);
-    leftStrip.setPixelColor(N_PIXELS-i, colorValLeft);
+    //leftStrip.setPixelColor(N_PIXELS-i, colorValLeft);
     rightStrip.setPixelColor(i, colorValRight);
-    rightStrip.setPixelColor(N_PIXELS-i, colorValRight);
+    //rightStrip.setPixelColor(N_PIXELS-i, colorValRight);
   }
 }
 
 void changeMode(){
+
   switch(currentMode){
     case classic: 
       currentMode = rainbow;
@@ -336,6 +338,7 @@ void changeMode(){
 void toggleChangeParams(){
   changeParams = !changeParams;
 }
+
  
 float fscale( float originalMin, float originalMax, float newBegin, float newEnd, float inputValue, float curve){
  
@@ -445,6 +448,5 @@ unsigned int EEPROMReadInt(int p_address)
   byte lowByte = EEPROM.read(p_address);
   byte highByte = EEPROM.read(p_address + 1);
   
-  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+  return (lowByte & 0xFF) + ((highByte << 8) & 0xFF00);
 }
-
