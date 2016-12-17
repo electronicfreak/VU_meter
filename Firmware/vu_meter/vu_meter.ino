@@ -21,7 +21,7 @@
 #define EEPROM_COLOR_ADDR 2
 #define EEPROM_CYCLE_SPEED_ADDR 5
 
-uint16_t sampleLeft, sampleRight;
+uint16_t sampleLeft, sampleRight,peakLeft,peakRight;
  
 Adafruit_NeoPixel leftStrip = Adafruit_NeoPixel(N_PIXELS, LEFT_LED_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel rightStrip = Adafruit_NeoPixel(N_PIXELS, RIGHT_LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -252,6 +252,22 @@ void showVU(){
       //rightStrip.setPixelColor(N_PIXELS-1-i, 0, 0, 0);
     }
   }
+
+  //set highpeak
+  if(cLeft >= peakLeft) {
+    peakLeft = cLeft;
+  }else{
+    cLeft = cLeft-1;
+  }  
+  
+  if(cRight >= peakRight) {
+    peakRight = cRight;
+  }else{
+    cRight = cRight-1;
+  }
+  rightStrip.setPixelColor(cRight, 255, 255, 255);
+  leftStrip.setPixelColor(cLeft, 255, 255, 255);
+  
   
   leftStrip.show();
   rightStrip.show();
